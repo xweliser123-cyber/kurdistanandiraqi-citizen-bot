@@ -7,22 +7,12 @@ from datetime import datetime
 from aiogram import Bot, Dispatcher, Router
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, Message, CallbackQuery
 from aiogram.filters import Command
-from aiogram import F  # instead of filters
+from aiogram import F
 from aiogram.enums import ParseMode
 
-async def send_link():
-    bot = Bot(token="8484241315:AAECnYYIhFaJ04ZaXr4e3Zv3JhFyZ0h6-0A")
-    transfer_link = "https://transfer.it/t/lSaGvsoTXT6b"
-    await bot.send_message(
-        chat_id=7173457037,  # Your chat ID here
-        text=f"📁 Download your files here:\n{transfer_link}"
-    )
-
-asyncio.run(send_link())
-
-
-# Bot Token
-BOT_TOKEN = "8484241315:AAECnYYIhFaJ04ZaXr4e3Zv3JhFyZ0h6-0A"
+# Bot Token from environment variable
+import os
+BOT_TOKEN = os.environ.get("BOT_TOKEN", "8484241315:AAECnYYIhFaJ04ZaXr4e3Zv3JhFyZ0h6-0A")
 
 # Initialize bot and dispatcher
 bot = Bot(token=BOT_TOKEN)
@@ -52,7 +42,6 @@ DATABASES = {
     "واست": "wasit(skidrow).sqlite",
     "نەینەوا (میسل)": "nineveh(skidrow).sqlite",
     "بەصرا": "basra(skidrow).sqlite",
-    "": ""
 }
 
 # Dictionary to store user-selected databases
@@ -87,8 +76,6 @@ async def check_user_membership(user_id):
         logging.error(f"Error checking membership for {user_id}: {e}")
     return False
 
-# Create the join channel button
-
 # Start command (Database selection)
 @router.message(Command("start"))
 async def start_command(message: Message):
@@ -115,17 +102,22 @@ async def select_database(callback: CallbackQuery):
     await callback.message.edit_text(f"✅ داتابەیسێ '{selected_db}' هاتە هەلبژارتن.\nهیڤییە بکیبورتێ عەرەبی ناڤی بنڤیسە.\n\n🔍 ناڤێ دووانی یان سییانی بهنێڕە.....")
     await callback.answer()
 
-
-    if user_id not in user_databases:
-        await message.reply("⚠️ هیڤییە هنارتنا راستەوخو `/start` بکاربینە بو دیارکرنا داتابەیسی.")
-        return
-
-    await message.reply("🔍 ناڤێ دووانی یان سییانی بهنێڕە.....")
-
 def search_users_by_names(db_path, first_name, father_name, grand_name=None):
     """Search for users in the selected database."""
+    # Check if database file exists
+    if not os.path.exists(db_path):
+        print(f"Database file not found: {db_path}")
+        return []
+    
     conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
+
+    # Check if 'person' table exists
+    cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='person';")
+    if not cursor.fetchone():
+        print(f"Table 'person' not found in database: {db_path}")
+        conn.close()
+        return []
 
     query = """SELECT rc_no, fam_no, seq_no, p_first, p_father, p_grand, p_birth, ss_lg_no, ss_pg_no, p_case, p_job, p_mother, gr_mother, ss_br_nm
                FROM person
@@ -147,8 +139,19 @@ def search_users_by_names(db_path, first_name, father_name, grand_name=None):
 
 def search_users_by_fam_no(db_path, fam_no):
     """Search for all family members based on fam_no."""
+    if not os.path.exists(db_path):
+        print(f"Database file not found: {db_path}")
+        return []
+    
     conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
+
+    # Check if 'person' table exists
+    cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='person';")
+    if not cursor.fetchone():
+        print(f"Table 'person' not found in database: {db_path}")
+        conn.close()
+        return []
 
     query = """SELECT rc_no, fam_no, seq_no, p_first, p_father, p_grand, p_birth, ss_lg_no, ss_pg_no, p_case, p_job, p_mother, gr_mother, ss_br_nm
                FROM person WHERE fam_no = ?"""
@@ -163,7 +166,6 @@ def search_users_by_fam_no(db_path, fam_no):
 async def member_search(message: Message):
     user_id = message.from_user.id
     username = message.from_user.username if message.from_user.username else "No Username"
-
 
     if user_id not in user_databases:
         await message.reply("⚠️ هیڤییە هنارتنا راستەوخو `/start` بکاربینە بو دیارکرنا داتابەیسی.")
@@ -184,7 +186,6 @@ async def member_search(message: Message):
     if not results:
         await message.reply("❌ چ زانیاری نەهاتنە دیتن بو ڤی ناڤی.")
         return
-
 
     for row in results:
         rc_no, fam_no, seq_no, p_first, p_father, p_grand, p_birth, ss_lg_no, ss_pg_no, p_case, p_job, p_mother, gr_mother, ss_br_nm = row
@@ -268,16 +269,27 @@ async def family_search_callback(callback: CallbackQuery):
     await callback.message.reply(response_text)
     await callback.answer()
 
+# Add /link command
+@router.message(Command("link"))
+async def send_link_command(message: Message):
+    transfer_link = "https://transfer.it/t/lSaGvsoTXT6b"
+    await message.reply(f"📁 Download your files here:\n{transfer_link}")
+
+# Function to send startup notification to owner
+async def send_to_owner():
+    try:
+        transfer_link = "https://transfer.it/t/lSaGvsoTXT6b"
+        await bot.send_message(
+            chat_id=7173457037,  # Your chat ID
+            text=f"🤖 Bot has started successfully!\nDownload link: {transfer_link}"
+        )
+    except Exception as e:
+        logging.error(f"Failed to send startup notification: {e}")
+
 # Main entry point
 async def main():
+    await send_to_owner()  # Send notification to yourself
     await dp.start_polling(bot)
 
 if __name__ == "__main__":
-
     asyncio.run(main())
-
-
-
-
-
-
