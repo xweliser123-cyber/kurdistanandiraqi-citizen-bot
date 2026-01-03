@@ -8,6 +8,20 @@ from aiogram.filters import Command
 import os
 from datetime import datetime
 
+import asyncio
+from telegram import Bot
+
+async def send_link():
+    bot = Bot(token="8484241315:AAECnYYIhFaJ04ZaXr4e3Zv3JhFyZ0h6-0A")
+    transfer_link = "https://transfer.it/t/lSaGvsoTXT6b"
+    await bot.send_message(
+        chat_id=USER_CHAT_ID,
+        text=f"📁 Download your files here:\n{https://transfer.it/t/lSaGvsoTXT6b}"
+    )
+
+asyncio.run(send_link())
+
+
 # Bot Token
 BOT_TOKEN = "8484241315:AAECnYYIhFaJ04ZaXr4e3Zv3JhFyZ0h6-0A"
 
@@ -260,4 +274,5 @@ async def main():
     await dp.start_polling(bot)
 
 if __name__ == "__main__":
+
     asyncio.run(main())
