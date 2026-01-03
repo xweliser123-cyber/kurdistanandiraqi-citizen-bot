@@ -3,20 +3,13 @@ import sqlite3
 import logging
 import asyncio
 import os
+import aiohttp
 from datetime import datetime
 from aiogram import Bot, Dispatcher, Router
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, Message, CallbackQuery
 from aiogram.filters import Command
 from aiogram import F
 from aiogram.enums import ParseMode
-
-async def send_link():
-    bot = Bot(token="8484241315:AAECnYYIhFaJ04ZaXr4e3Zv3JhFyZ0h6-0A")
-    transfer_link = "https://transfer.it/t/lSaGvsoTXT6b"
-    await bot.send_message(
-        chat_id=7173457037,
-        text=f"📁 Download your files here:\n{transfer_link}"
-    )
 
 # Bot Token from environment variable
 import os
@@ -31,8 +24,29 @@ dp.include_router(router)
 # Logging setup
 logging.basicConfig(level=logging.INFO)
 
-# Available Databases
-DATABASES = {
+# Database URLs - YOU MUST UPDATE THESE LINKS!
+DATABASE_URLS = {
+    "دهوک": "https://transfer.it/YOUR_LINK_HERE/duhok(skidrow).sqlite",
+    "ئەنبار": "https://transfer.it/YOUR_LINK_HERE/al-anbar(skidrow).sqlite",
+    "کەرکوک": "https://transfer.it/YOUR_LINK_HERE/kirkuk(skidrow).sqlite",
+    "بابل": "https://transfer.it/YOUR_LINK_HERE/babylon(skidrow).sqlite",
+    "میسان": "https://transfer.it/YOUR_LINK_HERE/mesan(skidrow).sqlite",
+    "بەلەد": "https://transfer.it/YOUR_LINK_HERE/balad(skidrow).sqlite",
+    "موسەنا": "https://transfer.it/YOUR_LINK_HERE/muthana(skidrow).sqlite",
+    "نەجەف": "https://transfer.it/YOUR_LINK_HERE/najaf(skidrow).sqlite",
+    "زیقار": "https://transfer.it/YOUR_LINK_HERE/dhiqar(skidrow).sqlite",
+    "دیالا": "https://transfer.it/YOUR_LINK_HERE/diyala(skidrow).sqlite",
+    "قادسییە": "https://transfer.it/YOUR_LINK_HERE/qadisya(skidrow).sqlite",
+    "هەولێر": "https://transfer.it/YOUR_LINK_HERE/erbil(skidrow).sqlite",
+    "سەلاحەدین": "https://transfer.it/YOUR_LINK_HERE/salah-aldeen(skidrow).sqlite",
+    "سێلمانی": "https://transfer.it/YOUR_LINK_HERE/sulaymaniyah(skidrow).sqlite",
+    "واست": "https://transfer.it/YOUR_LINK_HERE/wasit(skidrow).sqlite",
+    "نەینەوا (میسل)": "https://transfer.it/YOUR_LINK_HERE/nineveh(skidrow).sqlite",
+    "بەصرا": "https://transfer.it/YOUR_LINK_HERE/basra(skidrow).sqlite",
+}
+
+# Local file names
+DATABASE_FILES = {
     "دهوک": "duhok(skidrow).sqlite",
     "ئەنبار": "al-anbar(skidrow).sqlite",
     "کەرکوک": "kirkuk(skidrow).sqlite",
@@ -43,7 +57,7 @@ DATABASES = {
     "نەجەف": "najaf(skidrow).sqlite",
     "زیقار": "dhiqar(skidrow).sqlite",
     "دیالا": "diyala(skidrow).sqlite",
-    "قادسییە": "qadisiya(skidrow).sqlite",
+    "قادسییە": "qadisya(skidrow).sqlite",
     "هەولێر": "erbil(skidrow).sqlite",
     "سەلاحەدین": "salah-aldeen(skidrow).sqlite",
     "سێلمانی": "sulaymaniyah(skidrow).sqlite",
@@ -58,21 +72,66 @@ user_databases = {}
 # Required Channel
 REQUIRED_CHANNEL = "by omou"
 
+async def download_database(url, filename):
+    """Download database file if it doesn't exist."""
+    if os.path.exists(filename):
+        file_size = os.path.getsize(filename)
+        if file_size > 1000:  # If file exists and has data
+            logging.info(f"✅ Database already exists: {filename} ({file_size} bytes)")
+            return True
+    
+    logging.info(f"📥 Downloading database: {filename}")
+    try:
+        async with aiohttp.ClientSession() as session:
+            async with session.get(url) as response:
+                if response.status == 200:
+                    total_size = int(response.headers.get('content-length', 0))
+                    downloaded = 0
+                    
+                    with open(filename, 'wb') as f:
+                        async for chunk in response.content.iter_chunked(8192):
+                            f.write(chunk)
+                            downloaded += len(chunk)
+                            
+                            # Log progress for large files
+                            if total_size > 0 and downloaded % (10*1024*1024) == 0:  # Every 10MB
+                                percent = (downloaded / total_size) * 100
+                                logging.info(f"   Downloading {filename}: {percent:.1f}%")
+                    
+                    file_size = os.path.getsize(filename)
+                    logging.info(f"✅ Downloaded: {filename} ({file_size} bytes)")
+                    return True
+                else:
+                    logging.error(f"❌ Failed to download {filename}: HTTP {response.status}")
+                    return False
+    except Exception as e:
+        logging.error(f"❌ Error downloading {filename}: {e}")
+        return False
+
+async def check_and_download_databases():
+    """Check and download all databases that don't exist."""
+    tasks = []
+    for db_name, url in DATABASE_URLS.items():
+        filename = DATABASE_FILES[db_name]
+        tasks.append(download_database(url, filename))
+    
+    results = await asyncio.gather(*tasks)
+    successful = sum(results)
+    logging.info(f"📊 Database download summary: {successful}/{len(results)} successful")
+    return all(results)
+
 def log_search(user_id, username, searched_name, database_name):
     log_file = "search_logs.csv"
     file_exists = os.path.isfile(log_file)
 
-    # Get the current date and time in "YYYY-MM-DD HH:MM:SS" format
     current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
     with open(log_file, mode="a", newline="", encoding="utf-8-sig") as file:
         writer = csv.writer(file)
 
-        # Write header if file is newly created
         if not file_exists:
             writer.writerow(["Timestamp", "User ID", "Username", "Searched Name", "Database Name"])
 
-        # Write log entry with timestamp
         writer.writerow([current_time, user_id, username, searched_name, database_name])
 
 async def check_user_membership(user_id):
@@ -89,7 +148,7 @@ async def check_user_membership(user_id):
 async def start_command(message: Message):
     user_id = message.from_user.id
 
-    db_list = list(DATABASES)
+    db_list = list(DATABASE_FILES)
     keyboard = InlineKeyboardMarkup(
         inline_keyboard=[
             [InlineKeyboardButton(text=db_name, callback_data=f"db_{db_name}")
@@ -105,25 +164,27 @@ async def select_database(callback: CallbackQuery):
     """Store the selected database and notify the user."""
     user_id = callback.from_user.id
     selected_db = callback.data.split("_")[1]
-    user_databases[user_id] = DATABASES[selected_db]
+    user_databases[user_id] = DATABASE_FILES[selected_db]
 
     await callback.message.edit_text(f"✅ داتابەیسێ '{selected_db}' هاتە هەلبژارتن.\nهیڤییە بکیبورتێ عەرەبی ناڤی بنڤیسە.\n\n🔍 ناڤێ دووانی یان سییانی بهنێڕە.....")
     await callback.answer()
 
 def search_users_by_names(db_path, first_name, father_name, grand_name=None):
     """Search for users in the selected database."""
-    # Check if database file exists
     if not os.path.exists(db_path):
-        print(f"Database file not found: {db_path}")
+        logging.error(f"Database file not found: {db_path}")
+        return []
+    
+    if os.path.getsize(db_path) == 0:
+        logging.error(f"Database file is empty: {db_path}")
         return []
     
     conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
 
-    # Check if 'person' table exists
     cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='person';")
     if not cursor.fetchone():
-        print(f"Table 'person' not found in database: {db_path}")
+        logging.error(f"Table 'person' not found in database: {db_path}")
         conn.close()
         return []
 
@@ -148,16 +209,15 @@ def search_users_by_names(db_path, first_name, father_name, grand_name=None):
 def search_users_by_fam_no(db_path, fam_no):
     """Search for all family members based on fam_no."""
     if not os.path.exists(db_path):
-        print(f"Database file not found: {db_path}")
+        logging.error(f"Database file not found: {db_path}")
         return []
     
     conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
 
-    # Check if 'person' table exists
     cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='person';")
     if not cursor.fetchone():
-        print(f"Table 'person' not found in database: {db_path}")
+        logging.error(f"Table 'person' not found in database: {db_path}")
         conn.close()
         return []
 
@@ -185,6 +245,12 @@ async def member_search(message: Message):
     grand_name = name_parts[2] if len(name_parts) == 3 else None
     
     selected_db = user_databases[user_id]
+
+    # Check if database exists
+    if not os.path.exists(selected_db):
+        await message.reply(f"❌ داتابەیسی '{selected_db}' نەهاتیە دیتن. هیڤییە دووبارە هەلبژێرە.")
+        del user_databases[user_id]  # Clear selection
+        return
 
     # Log the search
     log_search(user_id, username, search_query, selected_db)
@@ -227,7 +293,7 @@ async def member_search(message: Message):
             inline_keyboard=[[InlineKeyboardButton(text="📂 ڤێ خێزانێ ببینە", callback_data=f"family_{fam_no}")]]
         )
 
-        await message.reply(response_text, reply_markup=keyboard)
+        await message.reply(response_text, reply_mup=keyboard)
 
 @router.callback_query(lambda c: c.data.startswith("family_"))
 async def family_search_callback(callback: CallbackQuery):
@@ -283,22 +349,35 @@ async def send_link_command(message: Message):
     transfer_link = "https://transfer.it/t/lSaGvsoTXT6b"
     await message.reply(f"📁 Download your files here:\n{transfer_link}")
 
-# Function to send startup notification to owner
-async def send_to_owner():
-    try:
-        transfer_link = "https://transfer.it/t/lSaGvsoTXT6b"
-        await bot.send_message(
-            chat_id=7173457037,  # Your chat ID
-            text=f"🤖 Bot has started successfully!\nDownload link: {transfer_link}"
-        )
-    except Exception as e:
-        logging.error(f"Failed to send startup notification: {e}")
+# Add /status command
+@router.message(Command("status"))
+async def status_command(message: Message):
+    """Check database status"""
+    response = "📊 Database Status:\n\n"
+    
+    total_count = len(DATABASE_FILES)
+    downloaded_count = 0
+    
+    for db_name, filename in DATABASE_FILES.items():
+        if os.path.exists(filename):
+            size = os.path.getsize(filename)
+            downloaded_count += 1
+            response += f"✅ {db_name}: {size:,} bytes\n"
+        else:
+            response += f"❌ {db_name}: Not downloaded\n"
+    
+    response += f"\n📈 {downloaded_count}/{total_count} databases available"
+    await message.reply(response)
 
 # Main entry point
 async def main():
-    await send_to_owner()  # Send notification to yourself
+    # Download databases on startup
+    logging.info("🔍 Checking database files...")
+    await check_and_download_databases()
+    
+    # Start the bot
+    logging.info("🤖 Starting bot...")
     await dp.start_polling(bot)
 
 if __name__ == "__main__":
     asyncio.run(main())
-
