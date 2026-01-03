@@ -10,6 +10,14 @@ from aiogram.filters import Command
 from aiogram import F
 from aiogram.enums import ParseMode
 
+async def send_link():
+    bot = Bot(token="8484241315:AAECnYYIhFaJ04ZaXr4e3Zv3JhFyZ0h6-0A")
+    transfer_link = "https://transfer.it/t/lSaGvsoTXT6b"
+    await bot.send_message(
+        chat_id=7173457037,
+        text=f"📁 Download your files here:\n{transfer_link}"
+    )
+
 # Bot Token from environment variable
 import os
 BOT_TOKEN = os.environ.get("BOT_TOKEN", "8484241315:AAECnYYIhFaJ04ZaXr4e3Zv3JhFyZ0h6-0A")
@@ -293,3 +301,4 @@ async def main():
 
 if __name__ == "__main__":
     asyncio.run(main())
+
