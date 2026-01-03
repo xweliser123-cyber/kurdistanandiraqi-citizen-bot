@@ -2,7 +2,7 @@ import csv
 import sqlite3
 import logging
 import asyncio
-from telegram import Bot
+from aiogram import Bot
 from telegram.ext import Application, CommandHandler, MessageHandler, filters
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, Message, CallbackQuery
 from aiogram.filters import Command
@@ -277,5 +277,6 @@ async def main():
 if __name__ == "__main__":
 
     asyncio.run(main())
+
 
 
