@@ -9,7 +9,7 @@ import os
 from datetime import datetime
 
 import asyncio
-from telegram import Bot
+from aiogram import Bot
 
 async def send_link():
     bot = Bot(token="8484241315:AAECnYYIhFaJ04ZaXr4e3Zv3JhFyZ0h6-0A")
@@ -276,3 +276,4 @@ async def main():
 if __name__ == "__main__":
 
     asyncio.run(main())
+
