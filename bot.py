@@ -24,71 +24,50 @@ dp.include_router(router)
 # Logging setup
 logging.basicConfig(level=logging.INFO)
 
-# Database URLs - YOU MUST UPDATE THESE LINKS!
-DATABASE_URLS = {
-    "دهوک": "https://transfer.it/t/yOjPXctxiZoL/duhok(skidrow).sqlite",
-}
-
-# Local file names
-DATABASE_FILES = {
-    "دهوک": "duhok(skidrow).sqlite",
-}
-
-# Dictionary to store user-selected databases
-user_databases = {}
+# ONLY DUHOK DATABASE
+DUHOK_DB_FILE = "duhok(skidrow).sqlite"
+DUHOK_DB_URL = "https://transfer.it/t/yOjPXctxiZoL"
 
 # Required Channel
 REQUIRED_CHANNEL = "by omou"
 
-async def download_database(url, filename):
-    """Download database file if it doesn't exist."""
-    if os.path.exists(filename):
-        file_size = os.path.getsize(filename)
+async def download_database():
+    """Download Duhok database if it doesn't exist."""
+    if os.path.exists(DUHOK_DB_FILE):
+        file_size = os.path.getsize(DUHOK_DB_FILE)
         if file_size > 1000:  # If file exists and has data
-            logging.info(f"✅ Database already exists: {filename} ({file_size} bytes)")
+            logging.info(f"✅ Database already exists: {DUHOK_DB_FILE} ({file_size} bytes)")
             return True
     
-    logging.info(f"📥 Downloading database: {filename}")
+    logging.info(f"📥 Downloading database: {DUHOK_DB_FILE}")
     try:
         async with aiohttp.ClientSession() as session:
-            async with session.get(url) as response:
+            async with session.get(DUHOK_DB_URL) as response:
                 if response.status == 200:
                     total_size = int(response.headers.get('content-length', 0))
-                    downloaded = 0
                     
-                    with open(filename, 'wb') as f:
+                    with open(DUHOK_DB_FILE, 'wb') as f:
+                        downloaded = 0
                         async for chunk in response.content.iter_chunked(8192):
                             f.write(chunk)
                             downloaded += len(chunk)
                             
-                            # Log progress for large files
-                            if total_size > 0 and downloaded % (10*1024*1024) == 0:  # Every 10MB
+                            # Log progress
+                            if total_size > 0 and downloaded % (5*1024*1024) == 0:  # Every 5MB
                                 percent = (downloaded / total_size) * 100
-                                logging.info(f"   Downloading {filename}: {percent:.1f}%")
+                                logging.info(f"   Progress: {percent:.1f}%")
                     
-                    file_size = os.path.getsize(filename)
-                    logging.info(f"✅ Downloaded: {filename} ({file_size} bytes)")
+                    file_size = os.path.getsize(DUHOK_DB_FILE)
+                    logging.info(f"✅ Downloaded: {DUHOK_DB_FILE} ({file_size} bytes)")
                     return True
                 else:
-                    logging.error(f"❌ Failed to download {filename}: HTTP {response.status}")
+                    logging.error(f"❌ Failed to download: HTTP {response.status}")
                     return False
     except Exception as e:
-        logging.error(f"❌ Error downloading {filename}: {e}")
+        logging.error(f"❌ Error downloading: {e}")
         return False
 
-async def check_and_download_databases():
-    """Check and download all databases that don't exist."""
-    tasks = []
-    for db_name, url in DATABASE_URLS.items():
-        filename = DATABASE_FILES[db_name]
-        tasks.append(download_database(url, filename))
-    
-    results = await asyncio.gather(*tasks)
-    successful = sum(results)
-    logging.info(f"📊 Database download summary: {successful}/{len(results)} successful")
-    return all(results)
-
-def log_search(user_id, username, searched_name, database_name):
+def log_search(user_id, username, searched_name):
     log_file = "search_logs.csv"
     file_exists = os.path.isfile(log_file)
 
@@ -98,9 +77,9 @@ def log_search(user_id, username, searched_name, database_name):
         writer = csv.writer(file)
 
         if not file_exists:
-            writer.writerow(["Timestamp", "User ID", "Username", "Searched Name", "Database Name"])
+            writer.writerow(["Timestamp", "User ID", "Username", "Searched Name", "Database"])
 
-        writer.writerow([current_time, user_id, username, searched_name, database_name])
+        writer.writerow([current_time, user_id, username, searched_name, "Duhok"])
 
 async def check_user_membership(user_id):
     try:
@@ -111,48 +90,39 @@ async def check_user_membership(user_id):
         logging.error(f"Error checking membership for {user_id}: {e}")
     return False
 
-# Start command (Database selection)
+# Start command
 @router.message(Command("start"))
 async def start_command(message: Message):
-    user_id = message.from_user.id
+    # Check if database exists
+    if not os.path.exists(DUHOK_DB_FILE):
+        await message.reply("⏳ داتابەیسی نەهاتیە دیتن. هیڤییە چەندێ خوەکێ بوێرە...")
+        return
+    
+    # Check database size
+    db_size = os.path.getsize(DUHOK_DB_FILE)
+    if db_size < 1000:
+        await message.reply("❌ داتابەیسی بەتاڵە. هیڤییە دووبارە هەوڵبدە.")
+        return
+    
+    await message.reply("✅ داتابەیسی دهوک هاتە هەلبژارتن.\n\n🔍 ناڤێ دووانی یان سییانی بهنێڕە.....")
 
-    db_list = list(DATABASE_FILES)
-    keyboard = InlineKeyboardMarkup(
-        inline_keyboard=[
-            [InlineKeyboardButton(text=db_name, callback_data=f"db_{db_name}")
-             for db_name in db_list[i:i+3]]
-            for i in range(0, len(db_list), 3)
-        ]
-    )
-
-    await message.reply("📌 هیڤییە بنکەیێ داتابەیسی بهەلبژێرە:", reply_markup=keyboard)
-
-@router.callback_query(lambda c: c.data.startswith("db_"))
-async def select_database(callback: CallbackQuery):
-    """Store the selected database and notify the user."""
-    user_id = callback.from_user.id
-    selected_db = callback.data.split("_")[1]
-    user_databases[user_id] = DATABASE_FILES[selected_db]
-
-    await callback.message.edit_text(f"✅ داتابەیسێ '{selected_db}' هاتە هەلبژارتن.\nهیڤییە بکیبورتێ عەرەبی ناڤی بنڤیسە.\n\n🔍 ناڤێ دووانی یان سییانی بهنێڕە.....")
-    await callback.answer()
-
-def search_users_by_names(db_path, first_name, father_name, grand_name=None):
-    """Search for users in the selected database."""
-    if not os.path.exists(db_path):
-        logging.error(f"Database file not found: {db_path}")
+def search_users_by_names(first_name, father_name, grand_name=None):
+    """Search for users in Duhok database."""
+    if not os.path.exists(DUHOK_DB_FILE):
+        logging.error(f"Database file not found: {DUHOK_DB_FILE}")
         return []
     
-    if os.path.getsize(db_path) == 0:
-        logging.error(f"Database file is empty: {db_path}")
+    if os.path.getsize(DUHOK_DB_FILE) == 0:
+        logging.error(f"Database file is empty: {DUHOK_DB_FILE}")
         return []
     
-    conn = sqlite3.connect(db_path)
+    conn = sqlite3.connect(DUHOK_DB_FILE)
     cursor = conn.cursor()
 
+    # Check if 'person' table exists
     cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='person';")
     if not cursor.fetchone():
-        logging.error(f"Table 'person' not found in database: {db_path}")
+        logging.error(f"Table 'person' not found in database")
         conn.close()
         return []
 
@@ -174,18 +144,18 @@ def search_users_by_names(db_path, first_name, father_name, grand_name=None):
 
     return results
 
-def search_users_by_fam_no(db_path, fam_no):
+def search_users_by_fam_no(fam_no):
     """Search for all family members based on fam_no."""
-    if not os.path.exists(db_path):
-        logging.error(f"Database file not found: {db_path}")
+    if not os.path.exists(DUHOK_DB_FILE):
+        logging.error(f"Database file not found: {DUHOK_DB_FILE}")
         return []
     
-    conn = sqlite3.connect(db_path)
+    conn = sqlite3.connect(DUHOK_DB_FILE)
     cursor = conn.cursor()
 
     cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='person';")
     if not cursor.fetchone():
-        logging.error(f"Table 'person' not found in database: {db_path}")
+        logging.error(f"Table 'person' not found in database")
         conn.close()
         return []
 
@@ -203,27 +173,24 @@ async def member_search(message: Message):
     user_id = message.from_user.id
     username = message.from_user.username if message.from_user.username else "No Username"
 
-    if user_id not in user_databases:
-        await message.reply("⚠️ هیڤییە هنارتنا راستەوخو `/start` بکاربینە بو دیارکرنا داتابەیسی.")
+    # Check if database exists
+    if not os.path.exists(DUHOK_DB_FILE):
+        await message.reply("❌ داتابەیسی نەهاتیە دیتن. هیڤییە دووبارە هەوڵبدە.")
+        return
+    
+    if os.path.getsize(DUHOK_DB_FILE) < 1000:
+        await message.reply("❌ داتابەیسی بەتاڵە.")
         return
 
     search_query = message.text.strip()
     name_parts = search_query.split()
     first_name, father_name = name_parts[0], name_parts[1]
     grand_name = name_parts[2] if len(name_parts) == 3 else None
-    
-    selected_db = user_databases[user_id]
-
-    # Check if database exists
-    if not os.path.exists(selected_db):
-        await message.reply(f"❌ داتابەیسی '{selected_db}' نەهاتیە دیتن. هیڤییە دووبارە هەلبژێرە.")
-        del user_databases[user_id]  # Clear selection
-        return
 
     # Log the search
-    log_search(user_id, username, search_query, selected_db)
+    log_search(user_id, username, search_query)
 
-    results = search_users_by_names(selected_db, first_name, father_name, grand_name)
+    results = search_users_by_names(first_name, father_name, grand_name)
 
     if not results:
         await message.reply("❌ چ زانیاری نەهاتنە دیتن بو ڤی ناڤی.")
@@ -261,18 +228,13 @@ async def member_search(message: Message):
             inline_keyboard=[[InlineKeyboardButton(text="📂 ڤێ خێزانێ ببینە", callback_data=f"family_{fam_no}")]]
         )
 
-        await message.reply(response_text, reply_mup=keyboard)
+        await message.reply(response_text, reply_markup=keyboard)
 
 @router.callback_query(lambda c: c.data.startswith("family_"))
 async def family_search_callback(callback: CallbackQuery):
     """Search and send all family members when the button is clicked."""
-    user_id = callback.from_user.id
-    if user_id not in user_databases:
-        await callback.answer("⚠️ هیڤییە هنارتنا راستەوخو `/start` بکاربینە بو دیارکرنا داتابەیسی.")
-        return
-
     fam_no = callback.data.split("_")[1]
-    results = search_users_by_fam_no(user_databases[user_id], fam_no)
+    results = search_users_by_fam_no(fam_no)
 
     if not results:
         await callback.answer("❌ چ زانیاری نەهاتنە دیتن بو ڤی ژمارا خێزانێ.")
@@ -321,27 +283,17 @@ async def send_link_command(message: Message):
 @router.message(Command("status"))
 async def status_command(message: Message):
     """Check database status"""
-    response = "📊 Database Status:\n\n"
-    
-    total_count = len(DATABASE_FILES)
-    downloaded_count = 0
-    
-    for db_name, filename in DATABASE_FILES.items():
-        if os.path.exists(filename):
-            size = os.path.getsize(filename)
-            downloaded_count += 1
-            response += f"✅ {db_name}: {size:,} bytes\n"
-        else:
-            response += f"❌ {db_name}: Not downloaded\n"
-    
-    response += f"\n📈 {downloaded_count}/{total_count} databases available"
-    await message.reply(response)
+    if os.path.exists(DUHOK_DB_FILE):
+        size = os.path.getsize(DUHOK_DB_FILE)
+        await message.reply(f"✅ داتابەیسی دهوک:\n{size:,} بایت\n\n📊 ئامادەیە بۆ گەرێ.")
+    else:
+        await message.reply("❌ داتابەیسی نەهاتیە دیتن.")
 
 # Main entry point
 async def main():
-    # Download databases on startup
-    logging.info("🔍 Checking database files...")
-    await check_and_download_databases()
+    # Download database on startup
+    logging.info("🔍 Checking Duhok database...")
+    await download_database()
     
     # Start the bot
     logging.info("🤖 Starting bot...")
@@ -349,4 +301,3 @@ async def main():
 
 if __name__ == "__main__":
     asyncio.run(main())
-
