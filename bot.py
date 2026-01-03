@@ -26,44 +26,12 @@ logging.basicConfig(level=logging.INFO)
 
 # Database URLs - YOU MUST UPDATE THESE LINKS!
 DATABASE_URLS = {
-    "دهوک": "https://transfer.it/YOUR_LINK_HERE/duhok(skidrow).sqlite",
-    "ئەنبار": "https://transfer.it/YOUR_LINK_HERE/al-anbar(skidrow).sqlite",
-    "کەرکوک": "https://transfer.it/YOUR_LINK_HERE/kirkuk(skidrow).sqlite",
-    "بابل": "https://transfer.it/YOUR_LINK_HERE/babylon(skidrow).sqlite",
-    "میسان": "https://transfer.it/YOUR_LINK_HERE/mesan(skidrow).sqlite",
-    "بەلەد": "https://transfer.it/YOUR_LINK_HERE/balad(skidrow).sqlite",
-    "موسەنا": "https://transfer.it/YOUR_LINK_HERE/muthana(skidrow).sqlite",
-    "نەجەف": "https://transfer.it/YOUR_LINK_HERE/najaf(skidrow).sqlite",
-    "زیقار": "https://transfer.it/YOUR_LINK_HERE/dhiqar(skidrow).sqlite",
-    "دیالا": "https://transfer.it/YOUR_LINK_HERE/diyala(skidrow).sqlite",
-    "قادسییە": "https://transfer.it/YOUR_LINK_HERE/qadisya(skidrow).sqlite",
-    "هەولێر": "https://transfer.it/YOUR_LINK_HERE/erbil(skidrow).sqlite",
-    "سەلاحەدین": "https://transfer.it/YOUR_LINK_HERE/salah-aldeen(skidrow).sqlite",
-    "سێلمانی": "https://transfer.it/YOUR_LINK_HERE/sulaymaniyah(skidrow).sqlite",
-    "واست": "https://transfer.it/YOUR_LINK_HERE/wasit(skidrow).sqlite",
-    "نەینەوا (میسل)": "https://transfer.it/YOUR_LINK_HERE/nineveh(skidrow).sqlite",
-    "بەصرا": "https://transfer.it/YOUR_LINK_HERE/basra(skidrow).sqlite",
+    "دهوک": "https://transfer.it/t/yOjPXctxiZoL/duhok(skidrow).sqlite",
 }
 
 # Local file names
 DATABASE_FILES = {
     "دهوک": "duhok(skidrow).sqlite",
-    "ئەنبار": "al-anbar(skidrow).sqlite",
-    "کەرکوک": "kirkuk(skidrow).sqlite",
-    "بابل": "babylon(skidrow).sqlite",
-    "میسان": "mesan(skidrow).sqlite",
-    "بەلەد": "balad(skidrow).sqlite",
-    "موسەنا": "muthana(skidrow).sqlite",
-    "نەجەف": "najaf(skidrow).sqlite",
-    "زیقار": "dhiqar(skidrow).sqlite",
-    "دیالا": "diyala(skidrow).sqlite",
-    "قادسییە": "qadisya(skidrow).sqlite",
-    "هەولێر": "erbil(skidrow).sqlite",
-    "سەلاحەدین": "salah-aldeen(skidrow).sqlite",
-    "سێلمانی": "sulaymaniyah(skidrow).sqlite",
-    "واست": "wasit(skidrow).sqlite",
-    "نەینەوا (میسل)": "nineveh(skidrow).sqlite",
-    "بەصرا": "basra(skidrow).sqlite",
 }
 
 # Dictionary to store user-selected databases
@@ -381,3 +349,4 @@ async def main():
 
 if __name__ == "__main__":
     asyncio.run(main())
+
