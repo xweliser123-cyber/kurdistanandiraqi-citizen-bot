@@ -26,7 +26,7 @@ logging.basicConfig(level=logging.INFO)
 
 # ONLY DUHOK DATABASE
 DUHOK_DB_FILE = "duhok(skidrow).sqlite"
-DUHOK_DB_URL = "https://transfer.it/t/yOjPXctxiZoL"
+DUHOK_DB_URL = "https://transfer.it/t/2QsMbBkRmJBJ"
 
 # Required Channel
 REQUIRED_CHANNEL = "by omou"
@@ -301,3 +301,4 @@ async def main():
 
 if __name__ == "__main__":
     asyncio.run(main())
+
