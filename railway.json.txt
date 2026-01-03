@@ -5,7 +5,8 @@
     "buildCommand": "pip install -r requirements.txt"
   },
   "deploy": {
-    "startCommand": "python ge.py",
+    "startCommand": "python bot.py",
     "restartPolicyType": "ALWAYS"
   }
+
 }
