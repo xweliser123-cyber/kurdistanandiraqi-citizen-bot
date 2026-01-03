@@ -2,15 +2,13 @@ import csv
 import sqlite3
 import logging
 import asyncio
-from aiogram import Bot
-from telegram.ext import Application, CommandHandler, MessageHandler, filters
-from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, Message, CallbackQuery
-from aiogram.filters import Command
 import os
 from datetime import datetime
-
-import asyncio
-from aiogram import Bot
+from aiogram import Bot, Dispatcher, Router
+from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, Message, CallbackQuery
+from aiogram.filters import Command
+from aiogram import F  # instead of filters
+from aiogram.enums import ParseMode
 
 async def send_link():
     bot = Bot(token="8484241315:AAECnYYIhFaJ04ZaXr4e3Zv3JhFyZ0h6-0A")
@@ -277,6 +275,7 @@ async def main():
 if __name__ == "__main__":
 
     asyncio.run(main())
+
 
 
 
